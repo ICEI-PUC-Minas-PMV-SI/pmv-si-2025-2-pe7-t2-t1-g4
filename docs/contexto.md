@@ -197,7 +197,7 @@ A página do Kaggle afirma que o dataset é "fácil de entender e autoexplicativ
 
 # Canvas analítico
 
-![Canvas Analítico](docs/img/canvasAnalitico.png)
+![Canvas Analítico](https://raw.githubusercontent.com/ICEI-PUC-Minas-PMV-SI/pmv-si-2025-2-pe7-t2-t1-g4/DevLass-patch-1/docs/img/canvasAnalitico.png)
 
 
 # Vídeo de apresentação da Etapa 01
