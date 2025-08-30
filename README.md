@@ -10,17 +10,17 @@ Explorar e conceituar o desenvolvimento de um algoritmo de recomendação de ven
 
 ## Integrantes
 
-Fillipe Gabriel Izidorio Serafim
-Josenilson Silva Santos
-Nicollas Kawan Pedroso Venancio de Oliveira
-Túlio Almeida Lopes
-Vinícius de Paula Nominato Marques
-Caio Ignatz Martins
+- Fillipe Gabriel Izidorio Serafim <br>
+- Josenilson Silva Santos <br>
+- Nicollas Kawan Pedroso Venancio de Oliveira <br>
+- Túlio Almeida Lopes <br>
+- Vinícius de Paula Nominato Marques<br>
+- Caio Ignatz Martins <br>
 
 
 ## Orientador
 
-Neil Paiva Tizzo
+- Neil Paiva Tizzo
 
 # Planejamento
 
