@@ -6,20 +6,21 @@
 
 `SEMESTRE: 7º`
 
-Descrever resumidamente, em um ou dois parágrafos, o projeto que está sendo desenvolvido.
+Explorar e conceituar o desenvolvimento de um algoritmo de recomendação de vendas usando dados históricos de compras para personalizar sugestões de produtos e aumentar conversão, engajamento e fidelização no varejo.
 
 ## Integrantes
 
-* Nome completo do aluno 1
-* Nome completo do aluno 2
-* Nome completo do aluno 3
-* Nome completo do aluno 4
-* Nome completo do aluno 5
-* Nome completo do aluno 6
+Fillipe Gabriel Izidorio Serafim
+Josenilson Silva Santos
+Nicollas Kawan Pedroso Venancio de Oliveira
+Túlio Almeida Lopes
+Vinícius de Paula Nominato Marques
+Caio Ignatz Martins
+
 
 ## Orientador
 
-* Nome completo do professor 1
+Neil Paiva Tizzo
 
 # Planejamento
 
