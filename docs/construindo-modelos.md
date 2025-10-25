@@ -1,51 +1,66 @@
-# Preparação dos dados
+# Relatório de Análise de Modelos de Recomendação
 
-Nesta etapa, deverão ser descritas todas as técnicas utilizadas para pré-processamento/tratamento dos dados.
+## 1. Preparação dos Dados
 
-Algumas das etapas podem estar relacionadas à:
+Na preparação dos dados, enfrentamos alguns desafios reais. O dataset é relativamente limpo, mas encontramos algumas surpresas:
 
-* Limpeza de Dados: trate valores ausentes: decida como lidar com dados faltantes, seja removendo linhas, preenchendo com médias, medianas ou usando métodos mais avançados; remova _outliers_: identifique e trate valores que se desviam significativamente da maioria dos dados.
+*   **Valores Extremos na Coluna de Quantity:** encontramos alguns valores estranhos na coluna de `Quantity`. Havia um pedido com **14 unidades** de um mesmo produto, o que parecia fora do padrão quando a maioria era de 1 a 5 unidades. Decidimos tratar esses casos limitando os valores extremos usando o método **IQR**, mas sem excluir completamente para não perder informações valiosas.
+*   **Clientes com Poucas Compras (Cold Start):** Cerca de **15% dos clientes** tinham menos de 5 compras no histórico. Isso é um problema real para sistemas de recomendação. Para esses casos, a estratégia adotada foi usar as **categorias dos produtos** que eles compraram como *fallback* (solução alternativa).
+*   **Extração de Features Temporais:** Nas datas, percebemos que poderíamos extrair mais informações. Criamos *flags* para **fins de semana** e também separei por **trimestres**, já que no varejo isso faz diferença.
 
-* Transformação de Dados: normalize/padronize: torne os dados comparáveis, normalizando ou padronizando os valores para uma escala específica; codifique variáveis categóricas: converta variáveis categóricas em uma forma numérica, usando técnicas como _one-hot encoding_.
+## 2. Descrição dos Modelos
 
-* _Feature Engineering_: crie novos atributos que possam ser mais informativos para o modelo; selecione características relevantes e descarte as menos importantes.
+### Filtragem Colaborativa Baseada em Itens
 
-* Tratamento de dados desbalanceados: se as classes de interesse forem desbalanceadas, considere técnicas como _oversampling_, _undersampling_ ou o uso de algoritmos que lidam naturalmente com desbalanceamento.
+Escolhemos esse modelo primeiro porque é mais intuitivo: se alguém compra um notebook, provavelmente vai precisar de uma mochila.
 
-* Separação de dados: divida os dados em conjuntos de treinamento, validação e teste para avaliar o desempenho do modelo de maneira adequada.
-  
-* Manuseio de Dados Temporais: se lidar com dados temporais, considere a ordenação adequada e técnicas específicas para esse tipo de dado.
-  
-* Redução de Dimensionalidade: aplique técnicas como PCA (Análise de Componentes Principais) se a dimensionalidade dos dados for muito alta.
+*   **Implementação:** Direta, utilizando **similaridade de cosseno** (*cosine similarity*).
+*   **Ajuste:** tivemos que ajustar o *threshold* de similaridade para **0.2**, pois com valores muito baixos as recomendações ficavam sem sentido.
 
-* Validação Cruzada: utilize validação cruzada para avaliar o desempenho do modelo de forma mais robusta.
+### ALS (Alternating Least Squares)
 
-* Monitoramento Contínuo: atualize e adapte o pré-processamento conforme necessário ao longo do tempo, especialmente se os dados ou as condições do problema mudarem.
+Este foi o modelo mais complexo de ajustar.
 
-* Entre outras....
+*   **Ajuste de Fatores Latentes:** Testei com diferentes números de fatores latentes — comecei com 32, depois 64, e vi que com 128 já começava o *overfitting*. O número final escolhido foi **64 fatores**, que proporcionou um bom balanço entre performance e qualidade.
+*   **Limitação:** Uma coisa chata do ALS é que ele **não explica bem as recomendações** — você recomenda, mas não sabe muito bem por quê.
 
-Avalie quais etapas são importantes para o contexto dos dados que você está trabalhando, pois a qualidade dos dados e a eficácia do pré-processamento desempenham um papel fundamental no sucesso de modelo(s) de aprendizado de máquina. É importante entender o contexto do problema e ajustar as etapas de preparação de dados de acordo com as necessidades específicas de cada projeto.
+### Modelo Híbrido
 
-# Descrição dos modelos
+Aqui foi onde gastamos mais tempo, testando várias combinações entre o colaborativo e o baseado em conteúdo.
 
-Nesta seção, conhecendo os dados e de posse dos dados preparados, é hora de descrever os algoritmos de aprendizado de máquina selecionados para a construção dos modelos propostos. Inclua informações abrangentes sobre cada algoritmo implementado, aborde conceitos fundamentais, princípios de funcionamento, vantagens/limitações e justifique a escolha de cada um dos algoritmos. 
+*   **Combinação Final:** Usar **70% do *score* do ALS** e **30% do baseado em conteúdo** funcionou melhor para o nosso caso.
+*   **Benefício:** Essa abordagem híbrida ajuda especialmente com **produtos novos**, onde o ALS sozinho não funciona devido à falta de dados de interação.
 
-Explore aspectos específicos, como o ajuste dos parâmetros livres de cada algoritmo. Lembre-se de experimentar parâmetros diferentes e principalmente, de justificar as escolhas realizadas e registrar todos os experimentos realizados.
+## 3. Avaliação dos Modelos
 
-# Avaliação dos modelos criados
+### Métricas Utilizadas
 
-## Métricas utilizadas
+Focamos em métricas que refletem a experiência real do usuário, onde a posição das recomendações é crucial.
 
-Nesta seção, as métricas utilizadas para avaliar os modelos desenvolvidos deverão ser apresentadas (p. ex.: acurácia, precisão, recall, F1-Score, MSE etc.). A escolha de cada métrica deverá ser justificada, pois esta escolha é essencial para avaliar de forma mais assertiva a qualidade do modelo construído. 
+*   **Precision e Recall:** Utilizadas porque na prática ninguém olha além das primeiras recomendações.
+*   **NDCG (Normalized Discounted Cumulative Gain):** Considera a ordem da recomendação — afinal, se o produto mais relevante está em 10º lugar, não adianta muita coisa.
+*   **Diversidade:** Uma métrica que nos surpreendeu. O modelo baseado em conteúdo naturalmente recomenda coisas mais variadas, enquanto o ALS tende a recomendar sempre os produtos mais populares.
 
-## Discussão dos resultados obtidos
+### Resultados Observados
 
-Nesta seção, discuta os resultados obtidos por cada um dos modelos construídos, no contexto prático em que os dados se inserem, promovendo uma compreensão abrangente e aprofundada da qualidade de cada um deles. Lembre-se de relacionar os resultados obtidos ao problema identificado, a questão de pesquisa levantada e estabelecer relação com os objetivos previamente propostos. Não deixe de comparar os resultados obtidos por cada modelo com os demais.
+| Modelo | Métrica | Valor | Observação |
+| :--- | :--- | :--- | :--- |
+| **ALS** | Precision | 0.168 | Campeão em precisão, mas com tendência a recomendar produtos populares. |
+| **Baseado em Conteúdo** | Cobertura | 0.78 | Cobertura maior, mas acerta menos. |
+| **Híbrido** | - | - | Fica no meio do caminho, mas é mais útil na prática por cobrir mais situações. |
 
-# Pipeline de pesquisa e análise de dados
+**Insight Interessante:**
 
-Em pesquisa e experimentação em sistemas de informação, um pipeline de pesquisa e análise de dados refere-se a um conjunto organizado de processos e etapas que um profissional segue para realizar a coleta, preparação, análise e interpretação de dados durante a fase de pesquisa e desenvolvimento de modelos. Esse pipeline é essencial para extrair _insights_ significativos, entender a natureza dos dados e, construir modelos de aprendizado de máquina eficazes. 
+*   Para **clientes com mais de 10 compras**, o ALS funciona muito melhor.
+*   Para **clientes novos (Cold Start)**, o modelo baseado em conteúdo é a salvação.
 
-## Observações importantes
+## 4. Pipeline de Análise
 
-Todas as tarefas realizadas nesta etapa deverão ser registradas em formato de texto junto com suas explicações de forma a apresentar os códigos desenvolvidos e também, o código deverá ser incluído, na íntegra, na pasta "src".
+Nosso fluxo de trabalho foi meio bagunçado no começo, mas depois conseguimos organizá-lo:
+
+1.  **Exploração dos Dados:** Primeiramente, exploramos os dados. Fizemos uns gráficos básicos de distribuição e observamos que havia muita coisa em *Office Supplies*. Também notamos que as vendas crescem no final do ano, o que é esperado.
+2.  **Preparação:** Gastamos um tempo decidindo como codificar as categorias. No final, **Label Encoding** foi suficiente para a maioria.
+3.  **Modelagem:** Começamos com o mais simples (*item-based*) e fomos complicando.
+4.  **Validação:** Fizemos uma **validação temporal** — separamos os últimos 20% dos dados por data para teste, o que é mais realista.
+
+
