@@ -1,7 +1,7 @@
 # Etapa 4 — Construção de Modelos, Avaliação e Comparação
 
 ## Pré-processamento e Ajustes
-- Remoção de 'product_id' dos features para evitar vazamento por produto.
+- Remoção de "product_id" dos features para evitar vazamento por produto.
 - Codificação categórica via OneHotEncoder em colunas de menor cardinalidade: ['ship_mode','segment','country','state','region','category','sub_category'].
 - Imputação: categóricas por moda, numéricas por mediana.
 - Validação por produto com GroupKFold (n_splits=5).
@@ -14,8 +14,8 @@
 - Macro F1, com acurácia como métrica auxiliar.
 
 ### LogisticRegression
-- CV mean_acc = 0.4463 ± 0.0153
-- CV macro_f1 = 0.3419
+- CV mean_acc = 0.4465 ± 0.0154
+- CV macro_f1 = 0.3422
 - Test 2018 acc = 0.444
 - Classification Report (2018):
 ```
@@ -24,7 +24,7 @@
            0       0.00      0.00      0.00       458
            1       0.37      0.78      0.50       659
            2       0.32      0.12      0.17       685
-           3       0.41      0.37      0.38       698
+           3       0.41      0.37      0.39       698
            4       0.60      0.79      0.68       758
 
     accuracy                           0.44      3258
@@ -76,7 +76,7 @@ weighted avg       0.53      0.54      0.54      3258
 ## Comparação por Macro F1 (CV)
 1. HistGradientBoosting: macro_f1=0.5455
 2. RandomForestClassifier: macro_f1=0.5152
-3. LogisticRegression: macro_f1=0.3419
+3. LogisticRegression: macro_f1=0.3422
 
 ## Refinamento do Pipeline
 - Pipeline modular (pré-processamento + modelo), permitindo troca de algoritmos sem alterar etapas anteriores.
