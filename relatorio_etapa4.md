@@ -14,22 +14,22 @@
 - Macro F1, com acurácia como métrica auxiliar.
 
 ### LogisticRegression
-- CV mean_acc = 0.4465 ± 0.0154
-- CV macro_f1 = 0.3422
-- Test 2018 acc = 0.444
+- CV mean_acc = 0.5550 ± 0.0104
+- CV macro_f1 = 0.5444
+- Test 2018 acc = 0.565
 - Classification Report (2018):
 ```
               precision    recall  f1-score   support
 
-           0       0.00      0.00      0.00       458
-           1       0.37      0.78      0.50       659
-           2       0.32      0.12      0.17       685
-           3       0.41      0.37      0.38       698
-           4       0.60      0.79      0.68       758
+           0       0.46      0.63      0.53       458
+           1       0.48      0.49      0.49       659
+           2       0.48      0.43      0.45       685
+           3       0.55      0.51      0.53       698
+           4       0.84      0.76      0.80       758
 
-    accuracy                           0.44      3258
-   macro avg       0.34      0.41      0.35      3258
-weighted avg       0.37      0.44      0.38      3258
+    accuracy                           0.57      3258
+   macro avg       0.56      0.57      0.56      3258
+weighted avg       0.58      0.57      0.57      3258
 
 ```
 
@@ -54,8 +54,8 @@ weighted avg       0.57      0.57      0.57      3258
 ```
 
 ### RandomForestClassifier
-- CV mean_acc = 0.5310 ± 0.0159
-- CV macro_f1 = 0.5152
+- CV mean_acc = 0.5312 ± 0.0157
+- CV macro_f1 = 0.5154
 - Test 2018 acc = 0.538
 - Classification Report (2018):
 ```
@@ -69,14 +69,14 @@ weighted avg       0.57      0.57      0.57      3258
 
     accuracy                           0.54      3258
    macro avg       0.53      0.53      0.53      3258
-weighted avg       0.53      0.54      0.54      3258
+weighted avg       0.54      0.54      0.54      3258
 
 ```
 
 ## Comparação por Macro F1 (CV)
 1. HistGradientBoosting: macro_f1=0.5455
-2. RandomForestClassifier: macro_f1=0.5152
-3. LogisticRegression: macro_f1=0.3422
+2. LogisticRegression: macro_f1=0.5444
+3. RandomForestClassifier: macro_f1=0.5154
 
 ## Refinamento do Pipeline
 - Pipeline modular (pré-processamento + modelo), permitindo troca de algoritmos sem alterar etapas anteriores.
