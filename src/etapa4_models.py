@@ -1,6 +1,8 @@
 from pathlib import Path
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from sklearn.model_selection import GroupKFold
 from sklearn.metrics import accuracy_score, f1_score, classification_report, confusion_matrix
@@ -10,12 +12,27 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
+from sklearn.calibration import CalibratedClassifierCV
 try:
     from catboost import CatBoostClassifier
     HAS_CATBOOST = True
 except Exception:
     CatBoostClassifier = None
     HAS_CATBOOST = False
+
+# XGBoost / LightGBM opcionais
+try:
+    from xgboost import XGBClassifier
+    HAS_XGB = True
+except Exception:
+    XGBClassifier = None
+    HAS_XGB = False
+try:
+    from lightgbm import LGBMClassifier
+    HAS_LGBM = True
+except Exception:
+    LGBMClassifier = None
+    HAS_LGBM = False
 
 
 def load_data(csv_path: Path) -> pd.DataFrame:
@@ -146,7 +163,7 @@ def eval_on_test(pipeline: Pipeline, X_train, y_train, X_test, y_test, fig_prefi
     pipeline.fit(X_train, y_train)
     y_pred = pipeline.predict(X_test).astype(int)
     acc = float(accuracy_score(y_test, y_pred))
-    report = classification_report(y_test, y_pred)
+    report = classification_report(y_test, y_pred, zero_division=0)
     # Matriz de confusão
     cm = confusion_matrix(y_test, y_pred)
     fig, ax = plt.subplots(figsize=(7, 6))
@@ -155,6 +172,7 @@ def eval_on_test(pipeline: Pipeline, X_train, y_train, X_test, y_test, fig_prefi
     ax.set_title(f'Matriz de Confusão — 2018 ({fig_prefix})')
     fig.tight_layout()
     out_dir = Path(__file__).resolve().parent / 'sales_files'
+    out_dir.mkdir(parents=True, exist_ok=True)
     img_path = out_dir / f'cm_{fig_prefix}.png'
     fig.savefig(img_path)
     plt.close(fig)
@@ -176,7 +194,7 @@ def eval_catboost_on_test(X_train, y_train, X_test, y_test, params: dict, fig_pr
     model.fit(X_train, y_train, cat_features=cat_features)
     y_pred = model.predict(X_test).astype(int).flatten()
     acc = float(accuracy_score(y_test, y_pred))
-    report = classification_report(y_test, y_pred)
+    report = classification_report(y_test, y_pred, zero_division=0)
     cm = confusion_matrix(y_test, y_pred)
     fig, ax = plt.subplots(figsize=(7, 6))
     from sklearn.metrics import ConfusionMatrixDisplay
@@ -184,11 +202,51 @@ def eval_catboost_on_test(X_train, y_train, X_test, y_test, params: dict, fig_pr
     ax.set_title(f'Matriz de Confusão — 2018 ({fig_prefix})')
     fig.tight_layout()
     out_dir = Path(__file__).resolve().parent / 'sales_files'
+    out_dir.mkdir(parents=True, exist_ok=True)
     img_path = out_dir / f'cm_{fig_prefix}.png'
     fig.savefig(img_path)
     plt.close(fig)
     print(f"Figura de confusão salva em: {img_path}")
     return acc, report
+
+
+def eval_on_test_calibrated_thresholds(pipeline: Pipeline, X_train, y_train, X_test, y_test, thresholds: dict, fig_prefix: str):
+    # Calibração de probabilidades com sigmoid
+    calib = CalibratedClassifierCV(estimator=pipeline, cv=3, method='sigmoid')
+    calib.fit(X_train, y_train)
+    proba = calib.predict_proba(X_test)
+    classes = list(calib.classes_)
+    thr_vec = np.array([thresholds.get(int(c), 0.5) for c in classes], dtype=float)
+    scores = proba / thr_vec
+    y_pred = np.argmax(scores, axis=1).astype(int)
+    acc = float(accuracy_score(y_test, y_pred))
+    report = classification_report(y_test, y_pred, zero_division=0)
+    cm = confusion_matrix(y_test, y_pred)
+    fig, ax = plt.subplots(figsize=(7, 6))
+    from sklearn.metrics import ConfusionMatrixDisplay
+    ConfusionMatrixDisplay(confusion_matrix=cm).plot(ax=ax, cmap='Blues')
+    ax.set_title(f'Matriz de Confusão — 2018 ({fig_prefix})')
+    fig.tight_layout()
+    out_dir = Path(__file__).resolve().parent / 'sales_files'
+    out_dir.mkdir(parents=True, exist_ok=True)
+    img_path = out_dir / f'cm_{fig_prefix}.png'
+    fig.savefig(img_path)
+    plt.close(fig)
+    print(f"Figura de confusão salva em: {img_path}")
+    return acc, report
+
+
+def compute_class_weight_focus(y_train: pd.Series) -> dict:
+    # Base equilibrada e leve reforço para classes com menor frequência
+    classes, counts = np.unique(y_train, return_counts=True)
+    n_classes = len(classes)
+    total = counts.sum()
+    base = {int(c): total / (n_classes * int(cnt)) for c, cnt in zip(classes, counts)}
+    median_cnt = np.median(counts)
+    for c, cnt in zip(classes, counts):
+        if cnt <= median_cnt:
+            base[int(c)] = base[int(c)] * 1.2
+    return base
 
 
 def write_report(md_path: Path, details: dict):
@@ -258,9 +316,11 @@ def main():
 
     preprocessor = build_preprocessor(cat_cols, num_cols)
 
+    # Logistic baselines com pesos
+    cw_custom = compute_class_weight_focus(y_train)
     models = [
-        ("LogisticRegression", LogisticRegression(max_iter=500, multi_class='multinomial', solver='saga')),
-        ("HistGradientBoosting", HistGradientBoostingClassifier(max_depth=6, learning_rate=0.06, max_iter=300, random_state=42))
+        ("LogisticRegression", LogisticRegression(max_iter=500, multi_class='multinomial', solver='saga', class_weight='balanced')),
+        ("LogisticRegressionCW", LogisticRegression(max_iter=500, multi_class='multinomial', solver='saga', class_weight=cw_custom))
     ]
 
     details = {}
@@ -276,6 +336,100 @@ def main():
             'cv_std_acc': cv_std_acc,
             'cv_macro_f1': cv_macro_f1,
             'test_acc': test_acc,
+            'report_text': report_text
+        }
+
+    # Grid leve para HistGradientBoosting
+    print("\n===== Grid leve para HistGradientBoosting =====")
+    hgb_grid = [
+        {'max_depth': 6, 'learning_rate': 0.05, 'max_iter': 300},
+        {'max_depth': 6, 'learning_rate': 0.08, 'max_iter': 300},
+        {'max_depth': 8, 'learning_rate': 0.05, 'max_iter': 400},
+        {'max_depth': 8, 'learning_rate': 0.08, 'max_iter': 400},
+    ]
+    best_hgb = None
+    best_hgb_metrics = None
+    best_hgb_macro_f1 = -1.0
+    for params in hgb_grid:
+        name = f"HistGradientBoosting_d{params['max_depth']}_lr{params['learning_rate']}_it{params['max_iter']}"
+        est = HistGradientBoostingClassifier(**params, random_state=42)
+        pipe = Pipeline(steps=[('preprocess', preprocessor), ('model', est)])
+        cv_mean_acc, cv_std_acc, cv_macro_f1 = run_groupkfold_cv(X_train, y_train, groups, pipe, n_splits=5)
+        print(f"CV {name}: acc={cv_mean_acc:.4f} ± {cv_std_acc:.4f}, macro_f1={cv_macro_f1:.4f}")
+        if cv_macro_f1 > best_hgb_macro_f1:
+            best_hgb_macro_f1 = cv_macro_f1
+            best_hgb = est
+            best_hgb_metrics = (cv_mean_acc, cv_std_acc, cv_macro_f1)
+    print("Avaliando melhor HistGradientBoosting em 2018...")
+    pipe = Pipeline(steps=[('preprocess', preprocessor), ('model', best_hgb)])
+    test_acc, report_text = eval_on_test(pipe, X_train, y_train, X_test, y_test, fig_prefix='HistGradientBoosting')
+    details['HistGradientBoosting'] = {
+        'cv_mean_acc': float(best_hgb_metrics[0]),
+        'cv_std_acc': float(best_hgb_metrics[1]),
+        'cv_macro_f1': float(best_hgb_metrics[2]),
+        'test_acc': float(test_acc),
+        'report_text': report_text
+    }
+
+    # XGB opcional
+    if HAS_XGB:
+        print("\n===== Grid leve para XGBClassifier =====")
+        xgb_grid = [
+            {'n_estimators': 300, 'max_depth': 6, 'learning_rate': 0.06, 'subsample': 0.9, 'colsample_bytree': 0.9},
+            {'n_estimators': 300, 'max_depth': 8, 'learning_rate': 0.06, 'subsample': 0.9, 'colsample_bytree': 0.9},
+        ]
+        best_xgb = None
+        best_xgb_metrics = None
+        best_xgb_macro_f1 = -1.0
+        for params in xgb_grid:
+            est = XGBClassifier(objective='multi:softprob', num_class=len(np.unique(y_train)), random_state=42, n_jobs=-1, **params)
+            name = f"XGBClassifier_d{params['max_depth']}_ne{params['n_estimators']}"
+            pipe = Pipeline(steps=[('preprocess', preprocessor), ('model', est)])
+            cv_mean_acc, cv_std_acc, cv_macro_f1 = run_groupkfold_cv(X_train, y_train, groups, pipe, n_splits=5)
+            print(f"CV {name}: acc={cv_mean_acc:.4f} ± {cv_std_acc:.4f}, macro_f1={cv_macro_f1:.4f}")
+            if cv_macro_f1 > best_xgb_macro_f1:
+                best_xgb_macro_f1 = cv_macro_f1
+                best_xgb = est
+                best_xgb_metrics = (cv_mean_acc, cv_std_acc, cv_macro_f1)
+        print("Avaliando melhor XGBClassifier em 2018...")
+        pipe = Pipeline(steps=[('preprocess', preprocessor), ('model', best_xgb)])
+        test_acc, report_text = eval_on_test(pipe, X_train, y_train, X_test, y_test, fig_prefix='XGBClassifier')
+        details['XGBClassifier'] = {
+            'cv_mean_acc': float(best_xgb_metrics[0]),
+            'cv_std_acc': float(best_xgb_metrics[1]),
+            'cv_macro_f1': float(best_xgb_metrics[2]),
+            'test_acc': float(test_acc),
+            'report_text': report_text
+        }
+
+    # LGBM opcional
+    if HAS_LGBM:
+        print("\n===== Grid leve para LGBMClassifier =====")
+        lgbm_grid = [
+            {'num_leaves': 31, 'max_depth': -1, 'learning_rate': 0.06, 'n_estimators': 300},
+            {'num_leaves': 63, 'max_depth': 8, 'learning_rate': 0.06, 'n_estimators': 300},
+        ]
+        best_lgbm = None
+        best_lgbm_metrics = None
+        best_lgbm_macro_f1 = -1.0
+        for params in lgbm_grid:
+            est = LGBMClassifier(objective='multiclass', random_state=42, **params)
+            name = f"LGBMClassifier_leaves{params['num_leaves']}_md{params['max_depth']}"
+            pipe = Pipeline(steps=[('preprocess', preprocessor), ('model', est)])
+            cv_mean_acc, cv_std_acc, cv_macro_f1 = run_groupkfold_cv(X_train, y_train, groups, pipe, n_splits=5)
+            print(f"CV {name}: acc={cv_mean_acc:.4f} ± {cv_std_acc:.4f}, macro_f1={cv_macro_f1:.4f}")
+            if cv_macro_f1 > best_lgbm_macro_f1:
+                best_lgbm_macro_f1 = cv_macro_f1
+                best_lgbm = est
+                best_lgbm_metrics = (cv_mean_acc, cv_std_acc, cv_macro_f1)
+        print("Avaliando melhor LGBMClassifier em 2018...")
+        pipe = Pipeline(steps=[('preprocess', preprocessor), ('model', best_lgbm)])
+        test_acc, report_text = eval_on_test(pipe, X_train, y_train, X_test, y_test, fig_prefix='LGBMClassifier')
+        details['LGBMClassifier'] = {
+            'cv_mean_acc': float(best_lgbm_metrics[0]),
+            'cv_std_acc': float(best_lgbm_metrics[1]),
+            'cv_macro_f1': float(best_lgbm_metrics[2]),
+            'test_acc': float(test_acc),
             'report_text': report_text
         }
 
@@ -311,6 +465,24 @@ def main():
             'test_acc': test_acc,
             'report_text': report_text
         }
+
+    # Avaliação calibrada com thresholds por classe (sobre LogisticRegressionCW)
+    print("\n===== Avaliação calibrada com thresholds por classe =====")
+    thr = {}
+    # Sugerir thresholds mais baixos para classes menos frequentes
+    classes, counts = np.unique(y_train, return_counts=True)
+    median_cnt = np.median(counts)
+    for c, cnt in zip(classes, counts):
+        thr[int(c)] = 0.45 if cnt <= median_cnt else 0.50
+    pipe_lr_cw = Pipeline(steps=[('preprocess', preprocessor), ('model', LogisticRegression(max_iter=500, multi_class='multinomial', solver='saga', class_weight=cw_custom))])
+    test_acc_cal, report_text_cal = eval_on_test_calibrated_thresholds(pipe_lr_cw, X_train, y_train, X_test, y_test, thresholds=thr, fig_prefix='LogisticRegression_calibrada')
+    details['LogisticRegression_calibrada'] = {
+        'cv_mean_acc': details['LogisticRegressionCW']['cv_mean_acc'],
+        'cv_std_acc': details['LogisticRegressionCW']['cv_std_acc'],
+        'cv_macro_f1': details['LogisticRegressionCW']['cv_macro_f1'],
+        'test_acc': float(test_acc_cal),
+        'report_text': report_text_cal
+    }
 
     print("\nGerando relatório da Etapa 4...")
     write_report(md_out, details)

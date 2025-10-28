@@ -1,4 +1,5 @@
 from pathlib import Path
+import unicodedata
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -52,6 +53,9 @@ def main():
     md_content = "(relatorio_etapa4.md não encontrado)"
     if md_path.exists():
         md_content = md_path.read_text(encoding='utf-8')
+        # Fallback ASCII (sem acentos) para visualizadores que não respeitam UTF-8
+        ascii_fallback = unicodedata.normalize('NFKD', md_content).encode('ascii', 'ignore').decode('ascii')
+        (root / 'relatorio_etapa4_ascii.txt').write_text(ascii_fallback, encoding='utf-8')
 
     candidates = [
         ('LogisticRegression', images_dir / 'cm_LogisticRegression.png'),
@@ -72,6 +76,10 @@ def main():
     html = HTML_TEMPLATE.format(md_content=md_content, images_html='\n'.join(cards))
     out_path.write_text(html, encoding='utf-8')
     print(f"HTML gerado em: {out_path}")
+    # Também gerar uma cópia na raiz do projeto para facilitar abertura direta
+    repo_root = root.parent
+    (repo_root / 'sales_report.html').write_text(html, encoding='utf-8')
+    print(f"HTML gerado em (cópia): {repo_root / 'sales_report.html'}")
 
 
 if __name__ == '__main__':
