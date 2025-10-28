@@ -71,14 +71,7 @@ def run_groupkfold_tuning(df_train: pd.DataFrame, cols_to_drop):
     cat_features_cv = build_cat_features(X_full)
 
     param_grid = [
-        {'iterations': 300, 'depth': 6, 'learning_rate': 0.05, 'l2_leaf_reg': 3},
-        {'iterations': 300, 'depth': 6, 'learning_rate': 0.10, 'l2_leaf_reg': 5},
-        {'iterations': 600, 'depth': 6, 'learning_rate': 0.05, 'l2_leaf_reg': 5},
-        {'iterations': 600, 'depth': 6, 'learning_rate': 0.10, 'l2_leaf_reg': 3},
-        {'iterations': 600, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 3},
-        {'iterations': 600, 'depth': 8, 'learning_rate': 0.10, 'l2_leaf_reg': 5},
-        {'iterations': 700, 'depth': 6, 'learning_rate': 0.05, 'l2_leaf_reg': 3},
-        {'iterations': 700, 'depth': 6, 'learning_rate': 0.10, 'l2_leaf_reg': 5},
+        {'iterations': 400, 'depth': 6, 'learning_rate': 0.06, 'l2_leaf_reg': 3}
     ]
 
     results = []
@@ -92,18 +85,18 @@ def run_groupkfold_tuning(df_train: pd.DataFrame, cols_to_drop):
             X_tr, X_val = X_full.iloc[tr_idx], X_full.iloc[val_idx]
             y_tr, y_val = y_full.iloc[tr_idx], y_full.iloc[val_idx]
 
-            train_pool = Pool(X_tr, label=y_tr, cat_features=cat_features_cv)
-            val_pool = Pool(X_val, cat_features=cat_features_cv)
-
             model = CatBoostClassifier(
                 loss_function='MultiClass',
                 random_state=42,
                 verbose=False,
+                thread_count=-1,
                 **params
             )
-            model.fit(train_pool)
-            val_preds = model.predict(val_pool).astype(int).flatten()
+            print(f"[TUNING] Fold {fold_idx+1}/5 com params {params}...")
+            model.fit(X_tr, y_tr, cat_features=cat_features_cv, eval_set=(X_val, y_val))
+            val_preds = model.predict(X_val).astype(int).flatten()
             acc = accuracy_score(y_val, val_preds)
+            print(f"[TUNING] Fold {fold_idx+1} acurácia = {acc:.4f}")
             fold_acc.append(acc)
             oof_preds[val_idx] = val_preds
 
@@ -133,18 +126,18 @@ def train_final_and_eval(df_train: pd.DataFrame, df_test: pd.DataFrame, cols_to_
     y_test = df_test['demand_ord']
 
     cat_features_final = build_cat_features(X_train_final)
-    train_pool_final = Pool(X_train_final, label=y_train, cat_features=cat_features_final)
-    test_pool_final = Pool(X_test_final, cat_features=cat_features_final)
 
+    final_params = {k: v for k, v in best_params['params'].items() if k not in ('use_best_model','od_type','od_wait','early_stopping_rounds')}
     model_final = CatBoostClassifier(
         loss_function='MultiClass',
         random_state=42,
         verbose=False,
-        **best_params['params']
+        thread_count=-1,
+        **final_params
     )
-    model_final.fit(train_pool_final)
+    model_final.fit(X_train_final, y_train, cat_features=cat_features_final)
 
-    test_preds_final = model_final.predict(test_pool_final).astype(int).flatten()
+    test_preds_final = model_final.predict(X_test_final).astype(int).flatten()
     test_acc_final = accuracy_score(y_test, test_preds_final)
     report = classification_report(y_test, test_preds_final)
 
