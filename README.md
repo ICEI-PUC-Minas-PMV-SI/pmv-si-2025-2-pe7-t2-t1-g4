@@ -40,6 +40,10 @@ Acesso em Produção (quando estiver disponível)
 
 <li><a href="src/README.md"> Código Fonte</a></li>
 
+# Guia de desenvolvimento
+
+<li><a href="README-dev.md"> Guia de desenvolvimento (setup e execução)</a></li>
+
 # Apresentação
 
 <li><a href="presentation/README.md"> Apresentação da solução</a></li>
