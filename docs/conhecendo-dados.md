@@ -13,21 +13,21 @@ O dataset utilizado nesta análise foi obtido em: [Sales Forecasting - Kaggle](h
 O notebook da análise descritiva e exploratória encontra-se em:
 
 ```
-src/etapa1/sales.ipynb
+src/sales.ipynb
 ```
 
 A base de dados (`train.csv`) utilizada está localizada em:
 
 ```
-src/etapa1/data/train.csv
+src/data/train.csv
 ```
 
 ## Como executar o notebook
 
-1. Navegue até o diretório do projeto etapa1:
+1. Navegue até o diretório `src`:
 
 ```sh
-cd src/etapa1
+cd src
 ```
 2. Ative o ambiente virtual (caso ainda não ativado):
 

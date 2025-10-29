@@ -32,13 +32,17 @@ Descrever resumidamente, em um ou dois parágrafos, o projeto que está sendo de
 
 ## Instruções de utilização
 
-Acesso em Produção (quando disponível)
+Acesso em Produção (quando estiver disponível)
 * URL: https://<seu-dominio>/...
 * Status: online/homologação
 
 # Código
 
 <li><a href="src/README.md"> Código Fonte</a></li>
+
+# Guia de desenvolvimento
+
+<li><a href="README-dev.md"> Guia de desenvolvimento (setup e execução)</a></li>
 
 # Apresentação
 
