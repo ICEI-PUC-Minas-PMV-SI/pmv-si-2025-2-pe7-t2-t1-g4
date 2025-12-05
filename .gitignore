@@ -95,3 +95,6 @@ data/*.rar
 # Ignore all log and checkpoint artifacts
 **/*.log
 **/.ipynb_checkpoints/
+**/.envrc
+
+src/catboost_info

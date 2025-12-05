@@ -1,0 +1,91 @@
+{
+  "ship_mode": "Second Class",
+  "customer_id": "CG-12520",
+  "segment": "Consumer",
+  "country": "United States",
+  "city": "Henderson",
+  "state": "Kentucky",
+  "postal_code": 42420,
+  "region": "South",
+  "category": "Furniture",
+  "sub_category": "Bookcases",
+  "sales": 261.96,
+  "ano": 2017,
+  "mes": 8,
+  "dia_semana": "sexta-feira",
+  "day_of_week": "Friday"
+}
+
+{
+  "ship_mode": "Same Day",
+  "customer_id": "CP-77881",
+  "segment": "Corporate",
+  "country": "United States",
+  "city": "Chicago",
+  "state": "Illinois",
+  "postal_code": 60007,
+  "region": "Central",
+  "category": "Technology",
+  "sub_category": "Phones",
+  "sales": 799.99,
+  "ano": 2017,
+  "mes": 12,
+  "dia_semana": "quarta-feira",
+  "day_of_week": "Wednesday"
+}
+
+{
+  "ship_mode": "Standard Class",
+  "customer_id": "CS-22011",
+  "segment": "Consumer",
+  "country": "United States",
+  "city": "New York",
+  "state": "New York",
+  "postal_code": 10001,
+  "region": "East",
+  "category": "Furniture",
+  "sub_category": "Chairs",
+  "sales": 529.00,
+  "ano": 2018,
+  "mes": 1,
+  "dia_semana": "segunda-feira",
+  "day_of_week": "Monday"
+}
+
+{
+  "ship_mode": "Standard Class",
+  "customer_id": "CP-89010",
+  "segment": "Corporate",
+  "country": "United States",
+  "city": "Seattle",
+  "state": "Washington",
+  "postal_code": 98101,
+  "region": "West",
+  "category": "Technology",
+  "sub_category": "Accessories",
+  "sales": 89.99,
+  "ano": 2018,
+  "mes": 3,
+  "dia_semana": "terça-feira",
+  "day_of_week": "Tuesday"
+}
+
+{
+  "ship_mode": "Second Class",
+  "customer_id": "CG-12520",
+  "segment": "Consumer",
+  "country": "United States",
+  "city": "Henderson",
+  "state": "Kentucky",
+  "postal_code": 42420,
+  "region": "South",
+  "category": "Furniture",
+  "sub_category": "Bookcases",
+  "sales": 261.96,
+  "ano": 2017,
+  "mes": 8,
+  "dia_semana": "sexta-feira",
+  "day_of_week": "Friday"
+}
+
+

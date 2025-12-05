@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Previsão de Demanda - CatBoost</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary-color: #0A74DA;
+      --primary-hover: #0056b3;
+      --bg-color: #f0f2f5;
+      --card-bg: #ffffff;
+      --text-color: #333;
+      --border-color: #e0e0e0;
+      --input-bg: #f9fafb;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+      background: var(--card-bg);
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    h1 {
+      color: var(--primary-color);
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    p.subtitle {
+      color: #666;
+      font-size: 14px;
+    }
+
+    /* Grid Layout para os Inputs */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+
+    .campo {
+      display: flex;
+      flex-direction: column;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #4b5563;
+    }
+
+    input, select {
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background-color: var(--input-bg);
+      font-size: 14px;
+      transition: all 0.2s ease;
+      font-family: 'Inter', sans-serif;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      background-color: #fff;
+      box-shadow: 0 0 0 3px rgba(10, 116, 218, 0.15);
+    }
+
+    /* Botão */
+    .actions {
+      margin-top: 30px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    button {
+      background: var(--primary-color);
+      color: #fff;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      width: 100%;
+    }
+
+    @media (min-width: 600px) {
+      button { width: auto; }
+    }
+
+    button:hover {
+      background: var(--primary-hover);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    /* Resultado */
+    #resultado {
+      margin-top: 25px;
+      padding: 20px;
+      border-radius: 8px;
+      display: none;
+      background: #eff6ff;
+      border: 1px solid #dbeafe;
+      text-align: center;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .result-value {
+      display: block;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--primary-color);
+      margin-top: 5px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>Previsão de Demanda</h1>
+      <p class="subtitle">Insira os dados abaixo para calcular a previsão via CatBoost</p>
+    </header>
+
+    <div class="form-grid">
+      <div class="campo">
+        <label for="ship_mode">Ship Mode</label>
+        <input id="ship_mode" type="text" placeholder="Ex: Second Class" />
+      </div>
+
+      <div class="campo">
+        <label for="customer_id">Customer ID</label>
+        <input id="customer_id" type="text" placeholder="Ex: CG-12520" />
+      </div>
+
+      <div class="campo">
+        <label for="segment">Segment</label>
+        <input id="segment" type="text" placeholder="Ex: Consumer" />
+      </div>
+
+      <div class="campo">
+        <label for="country">Country</label>
+        <input id="country" type="text" value="United States" />
+      </div>
+
+      <div class="campo">
+        <label for="city">City</label>
+        <input id="city" type="text" placeholder="Ex: Henderson" />
+      </div>
+
+      <div class="campo">
+        <label for="state">State</label>
+        <input id="state" type="text" placeholder="Ex: Kentucky" />
+      </div>
+
+      <div class="campo">
+        <label for="postal_code">Postal Code</label>
+        <input id="postal_code" type="number" placeholder="00000" />
+      </div>
+
+      <div class="campo">
+        <label for="region">Region</label>
+        <input id="region" type="text" placeholder="Ex: South" />
+      </div>
+
+      <div class="campo">
+        <label for="category">Category</label>
+        <input id="category" type="text" placeholder="Ex: Furniture" />
+      </div>
+
+      <div class="campo">
+        <label for="sub_category">Sub-Category</label>
+        <input id="sub_category" type="text" placeholder="Ex: Bookcases" />
+      </div>
+
+      <div class="campo">
+        <label for="sales">Sales ($)</label>
+        <input id="sales" type="number" step="0.01" placeholder="0.00" />
+      </div>
+
+      <div class="campo">
+        <label for="ano">Ano</label>
+        <input id="ano" type="number" placeholder="2024" />
+      </div>
+
+      <div class="campo">
+        <label for="mes">Mês</label>
+        <input id="mes" type="number" placeholder="1-12" />
+      </div>
+
+      <div class="campo">
+        <label for="dia_semana">Dia da Semana (PT)</label>
+        <input id="dia_semana" type="text" placeholder="Ex: Segunda-feira" />
+      </div>
+
+      <div class="campo">
+        <label for="day_of_week">Day of Week (EN)</label>
+        <input id="day_of_week" type="text" placeholder="Ex: Monday" />
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="btnPrever">Calcular Previsão</button>
+    </div>
+
+    <div id="resultado"></div>
+  </div>
+
+<script>
+  document.getElementById("btnPrever").addEventListener("click", async function () {
+      const btn = document.getElementById("btnPrever");
+      const originalBtnText = btn.innerText;
+      
+      // Feedback visual de carregamento
+      btn.disabled = true;
+      btn.innerText = "Calculando...";
+      btn.style.opacity = "0.7";
+
+      const dados = {
+        ship_mode: document.getElementById("ship_mode").value,
+        customer_id: document.getElementById("customer_id").value,
+        segment: document.getElementById("segment").value,
+        country: document.getElementById("country").value,
+        city: document.getElementById("city").value,
+        state: document.getElementById("state").value,
+        postal_code: parseInt(document.getElementById("postal_code").value) || 0, // Fallback simples para evitar NaN
+        region: document.getElementById("region").value,
+        category: document.getElementById("category").value,
+        sub_category: document.getElementById("sub_category").value,
+        sales: parseFloat(document.getElementById("sales").value) || 0,
+        ano: parseInt(document.getElementById("ano").value),
+        mes: parseInt(document.getElementById("mes").value),
+        dia_semana: document.getElementById("dia_semana").value,
+        day_of_week: document.getElementById("day_of_week").value
+      };
+
+      const resultadoDiv = document.getElementById("resultado");
+      resultadoDiv.style.display = "none"; // Esconde resultado anterior
+
+      try {
+        const resp = await fetch("http://127.0.0.1:8000/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dados)
+        });
+
+        if (!resp.ok) throw new Error("Erro na API: " + resp.status);
+
+        const data = await resp.json();
+
+        resultadoDiv.style.display = "block";
+        resultadoDiv.innerHTML = `
+          <span>Previsão de Demanda Estimada:</span>
+          <span class="result-value">
+            ${data.demand_prediction}
+          </span>
+        `;
+
+      } catch (e) {
+        resultadoDiv.style.display = "block";
+        resultadoDiv.innerHTML = `<span style="color:#d32f2f; font-weight:bold;">❌ Ocorreu um erro: ${e.message}</span>`;
+      } finally {
+        // Restaura o botão
+        btn.disabled = false;
+        btn.innerText = originalBtnText;
+        btn.style.opacity = "1";
+      }
+  });
+</script>
+
+</body>
+</html>

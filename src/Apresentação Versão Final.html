@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Algoritmo de Recomendação: Do EDA ao CatBoost</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7fafc;
+            scroll-behavior: smooth;
+        }
+        .slide {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem 1rem;
+            opacity: 0;
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+            transform: translateY(20px);
+        }
+        .slide.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .slide-content {
+            background: white;
+            padding: 3rem;
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            max-width: 1024px;
+            width: 95%;
+            border-top: 5px solid #10b981; /* Emerald green */
+        }
+        .pill {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        /* Botão aesthetic */
+        .app-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 16px 32px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            font-weight: 600;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+            font-size: 1.1rem;
+        }
+        
+        .app-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        }
+        
+        .app-button:active {
+            transform: translateY(0);
+        }
+        
+        .app-button i {
+            font-size: 1.3rem;
+        }
+        
+        /* Animações para a conclusão */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .conclusion-item {
+            animation: fadeInUp 0.6s ease-out forwards;
+            opacity: 0;
+        }
+        
+        .conclusion-item:nth-child(1) { animation-delay: 0.1s; }
+        .conclusion-item:nth-child(2) { animation-delay: 0.3s; }
+        .conclusion-item:nth-child(3) { animation-delay: 0.5s; }
+        .conclusion-item:nth-child(4) { animation-delay: 0.7s; }
+        
+        /* Estilo para a equipe */
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .team-member {
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #10b981;
+            transition: transform 0.3s ease;
+        }
+        
+        .team-member:hover {
+            transform: translateY(-5px);
+            background: #f1f5f9;
+        }
+        
+        .professor-card {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-left: 4px solid #3b82f6;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Slide 1: Introdução e Contexto -->
+    <section id="slide1" class="slide bg-gray-50">
+        <div class="slide-content">
+            <h1 class="text-4xl font-extrabold text-gray-900 mb-4 tracking-tight">Algoritmo de Recomendação de Vendas</h1>
+            <h2 class="text-2xl font-semibold text-emerald-600 mb-6">Do EDA (Análise Exploratória) à Modelagem Preditiva com CatBoost</h2>
+            <p class="text-gray-600 leading-relaxed">
+                Em um mercado de varejo cada vez mais competitivo, a capacidade de sugerir produtos relevantes aos clientes é um diferencial estratégico. Este projeto conceitual visa desenvolver um sistema de recomendação baseado no **Superstore Sales Dataset**, focando em aprimorar a experiência de compra e impulsionar o crescimento do negócio.
+            </p>
+            <div class="mt-8 text-center">
+                <p class="text-lg font-bold text-gray-700">Próximo: O Problema Central</p>
+                <a href="#slide2" class="mt-2 inline-block text-emerald-600 hover:text-emerald-800 transition duration-300 transform hover:scale-105">
+                    <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 2: O Problema e a Solução -->
+    <section id="slide2" class="slide bg-white">
+        <div class="slide-content">
+            <h2 class="text-3xl font-bold text-gray-900 mb-4">O Problema Central e a Justificativa</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-semibold text-red-500 mb-2">O Desafio</h3>
+                    <ul class="list-disc list-inside text-gray-600 space-y-2">
+                        <li>**Sobrecarga de Informação:** Clientes lutam para encontrar produtos relevantes.</li>
+                        <li>**Perda de Oportunidades:** Ausência de vendas cruzadas e adicionais.</li>
+                        <li>**Experiência Subótima:** Frustração e baixo engajamento com a loja.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold text-green-600 mb-2">A Solução e Seus Objetivos</h3>
+                    <p class="text-gray-700 mb-4">
+                        A solução é um sistema de recomendação que responde à questão: *Como usar dados históricos para sugerir produtos a clientes individuais e a clientes com perfis semelhantes?*
+                    </p>
+                    <div class="flex flex-wrap">
+                        <span class="pill bg-emerald-100 text-emerald-700">1. Explorar Padrões de Compra</span>
+                        <span class="pill bg-emerald-100 text-emerald-700">2. Identificar Similaridades (Filtragem Colaborativa)</span>
+                        <span class="pill bg-emerald-100 text-emerald-700">3. Propor Métricas de Avaliação (Precisão, F1-Score)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 3: Análise Exploratória de Dados (EDA) -->
+    <section id="slide3" class="slide bg-gray-50">
+        <div class="slide-content">
+            <h2 class="text-3xl font-bold text-gray-900 mb-4">Análise Exploratória de Dados (EDA)</h2>
+            <p class="text-gray-600 mb-6">
+                A etapa inicial é a **Análise Exploratória de Dados (EDA)** no dataset Superstore. Nosso objetivo é investigar a estrutura, padrões e relações entre variáveis para preparar o *dataset* para a modelagem.
+            </p>
+            <div class="grid md:grid-cols-3 gap-6 text-center">
+                <div class="p-4 rounded-lg bg-indigo-50 border-indigo-200 border">
+                    <p class="text-lg font-semibold text-indigo-700">Variáveis Chave</p>
+                    <p class="text-sm text-indigo-500">Customer ID, Product ID, Category, Sales, Quantity, Order Date.</p>
+                </div>
+                <div class="p-4 rounded-lg bg-indigo-50 border-indigo-200 border">
+                    <p class="text-lg font-semibold text-indigo-700">Pré-Processamento</p>
+                    <p class="text-sm text-indigo-500">Limpeza de *outliers* e tratamento de variáveis categóricas.</p>
+                </div>
+                <div class="p-4 rounded-lg bg-indigo-50 border-indigo-200 border">
+                    <p class="text-lg font-semibold text-indigo-700">Foco</p>
+                    <p class="text-sm text-indigo-500">Compreender a sazonalidade e produtos comprados juntos (padrões de consumo).</p>
+                </div>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-700 mt-6">Criação da Variável Alvo</h3>
+            <p class="text-gray-600 mt-2">
+                O modelo de recomendação é formulado como um problema de **Classificação Ordinal** para prever a Demanda de um produto:
+            </p>
+            <div class="mt-4 text-center">
+                <span class="pill bg-yellow-200 text-yellow-800">Baixa</span>
+                <span class="pill bg-orange-200 text-orange-800">Média</span>
+                <span class="pill bg-red-200 text-red-800">Alta</span>
+                <span class="pill bg-red-500 text-white">Muito Alta</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 4: O Modelo CatBoost -->
+    <section id="slide4" class="slide bg-white">
+        <div class="slide-content">
+            <h2 class="text-3xl font-bold text-gray-900 mb-4">Modelagem Preditiva: A Escolha do CatBoost</h2>
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <h3 class="text-xl font-semibold text-emerald-600 mb-2">Por que CatBoost?</h3>
+                    <p class="text-gray-600 leading-relaxed mb-4">
+                        O CatBoost (Categorical Boosting) foi o modelo que se mostrou **superior** para esta tarefa de classificação multiclasse nominal, superando alternativas como o LightGBM e o XGBoost (na abordagem de regressão ordinal).
+                    </p>
+                    <ul class="list-disc list-inside text-gray-700 space-y-2 font-medium">
+                        <li>**Performance Superior:** Demonstrou o melhor equilíbrio entre **Acurácia Nominal** (acertos exatos da classe) e **Erro Ordinal (MAE)**.</li>
+                        <li>**Tratamento de Categóricas:** Possui tratamento nativo e otimizado para variáveis categóricas, o que é crucial em um dataset de varejo (e.g., *Product ID*, *Category*).</li>
+                        <li>**Viés da Regressão Corrigido:** A abordagem de classificação multiclasse (CatBoost) evitou o viés da regressão ordinal com arredondamento, que falhou em capturar classes de demanda de cauda.</li>
+                    </ul>
+                </div>
+                <div class="p-6 rounded-lg bg-gray-100 shadow-inner">
+                    <p class="text-center text-4xl font-extrabold text-emerald-600 mb-2">~ 0.70</p>
+                    <p class="text-center text-sm text-gray-500 mb-4">F1-Score Macro Estimado (Melhor Modelo)</p>
+                    <p class="text-gray-700 text-sm italic">
+                        "O CatBoost é inequivocamente o modelo superior. Ele fornece o melhor equilíbrio entre Acurácia nominal (acertos exatos) e erro ordinal (MAE), além de ser robusto na predição de todas as classes de demanda."
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 5: Conclusão Aprimorada com Equipe e Botão -->
+    <section id="slide5" class="slide bg-gradient-to-br from-gray-50 to-emerald-50">
+        <div class="slide-content">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6">Conclusão e Impactos do Projeto</h2>
+            
+            <div class="conclusion-item">
+                <h3 class="text-xl font-semibold text-emerald-700 mb-3">Valor Gerado</h3>
+                <p class="text-gray-700 mb-4 leading-relaxed">
+                    Este projeto estabeleceu uma base robusta para um sistema de recomendação de vendas, demonstrando como técnicas avançadas de <span class="font-bold text-emerald-600">Machine Learning</span> podem transformar dados históricos em insights acionáveis. O modelo CatBoost, com seu desempenho superior no contexto de dados categóricos do varejo, se mostrou uma solução viável para personalização em escala.
+                </p>
+            </div>
+            
+            <div class="conclusion-item  my-6">
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-800 mb-2">Resultados Alcançados</h4>
+                    <ul class="list-disc list-inside text-gray-600 space-y-2">
+                        <li>Framework completo de EDA para dados de varejo</li>
+                        <li>Pipeline de pré-processamento otimizado para dados categóricos</li>
+                        <li>Modelo CatBoost com F1-Score de ~0.70 e robustez nas previsões</li>
+                        <li>Arquitetura escalável para implementação em sistemas reais</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="conclusion-item my-8">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">Equipe do Projeto</h3>
+                <div class="team-grid">
+                    <div class="team-member">
+                        <p class="font-medium text-gray-800">Caio Ignatz Martins</p>
+                        <p class="text-sm text-gray-500">Ciência de Dados</p>
+                    </div>
+                    <div class="team-member">
+                        <p class="font-medium text-gray-800">Fillipe Gabriel Izidorio Serafim</p>
+                        <p class="text-sm text-gray-500">Análise de Dados</p>
+                    </div>
+                    <div class="team-member">
+                        <p class="font-medium text-gray-800">Josenilson Silva Santos</p>
+                        <p class="text-sm text-gray-500">Machine Learning</p>
+                    </div>
+                    <div class="team-member">
+                        <p class="font-medium text-gray-800">Nicollas Kawan Pedroso Venancio de Oliveira</p>
+                        <p class="text-sm text-gray-500">Engenharia de Features</p>
+                    </div>
+                    <div class="team-member">
+                        <p class="font-medium text-gray-800">Túlio Almeida Lopes</p>
+                        <p class="text-sm text-gray-500">Visualização de Dados</p>
+                    </div>
+                    <div class="team-member">
+                        <p class="font-medium text-gray-800">Vinícius de Paula Nominato Marques</p>
+                        <p class="text-sm text-gray-500">Avaliação de Modelos</p>
+                    </div>
+                </div>
+                
+                <div class="professor-card">
+                    <p class="font-bold text-gray-800 text-lg">Orientação</p>
+                    <p class="font-medium text-blue-600">Prof. Neil Paiva Tizzo</p>
+                    <p class="text-sm text-gray-500">Coordenação e Orientação Técnica</p>
+                </div>
+            </div>
+            
+            <div class="conclusion-item text-center mt-8">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">Acesse a Aplicação</h3>
+                <p class="text-gray-600 mb-6">Experimente nosso sistema de recomendação em funcionamento:</p>
+                
+                <!-- Botão aesthetic para a aplicação -->
+                <a href="Formulário.html" target="_blank" class="app-button">
+                    <i class="fas fa-rocket"></i>
+                    <span>Testar Sistema de Recomendação</span>
+                </a>
+                
+                <div class="mt-10 pt-6 border-t border-gray-200">
+                    <p class="text-2xl font-extrabold text-emerald-600">Obrigado pela atenção!</p>
+                    <p class="text-gray-500 mt-2">Perguntas e feedback são bem-vindos</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.5 
+        };
+
+        // Função de detecção de rolagem para animar os slides
+        const slideObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    
+                    // Animar elementos da conclusão quando o slide 5 estiver visível
+                    if (entry.target.id === 'slide5') {
+                        const conclusionItems = entry.target.querySelectorAll('.conclusion-item');
+                        conclusionItems.forEach(item => {
+                            item.style.opacity = '1';
+                        });
+                    }
+                } else {
+                    entry.target.classList.remove('active');
+                }
+            });
+        }, observerOptions);
+
+        slides.forEach(slide => {
+            slideObserver.observe(slide);
+        });
+
+        // Função para rolagem suave ao clicar nos links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+        
+        // Efeito de hover melhorado para o botão da aplicação
+        document.querySelectorAll('.app-button').forEach(button => {
+            button.addEventListener('mouseenter', function() {
+                this.querySelector('i').style.transform = 'translateY(-3px)';
+            });
+            
+            button.addEventListener('mouseleave', function() {
+                this.querySelector('i').style.transform = 'translateY(0)';
+            });
+        });
+    </script>
+
+</body>
+</html>
